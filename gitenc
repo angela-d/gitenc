@@ -3,9 +3,6 @@
 # /home/your_username/.gitenc
 GITENC_CONF="$HOME/.gitenc"
 
-# generate 4096 key still needed
-# symlink needed
-
 function lockdown() {
 
   # if a previously encrypted file exists, remove it
