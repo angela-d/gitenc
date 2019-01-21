@@ -1,0 +1,158 @@
+#!/bin/bash
+
+# /home/your_username/.gitenc
+GITENC_CONF="$HOME/.gitenc"
+
+# generate 4096 key still needed
+# symlink needed
+
+function lockdown() {
+
+  # if a previously encrypted file exists, remove it
+  if [ -f "$1".gpg ];
+  then
+
+    rm "$1".gpg
+
+  fi
+
+  # to alter the cipher used, append your selection below
+  gpg --batch -c --passphrase-file "$GITENC_CONF" "$1"
+
+}
+
+
+# a gitenc add argument is passed, validate to see if encryption is needed
+if [ "$1" == "add" ];
+then
+
+  if [ "$2" == "." ] || [ "$2" == "-A" ] || [ "$2" == "--all" ];
+  then
+
+    for filename in $(git status --porcelain | sed s/^...//);
+      do {
+
+        # only re-encrypt files if they were changed in the last 24hrs
+        if [[ $filename != *.gpg ]] &&
+           ([[ $filename == *connection* ]] ||
+           [[ $filename == *.conf ]] ||
+           [[ $filename == *.cnf ]] ||
+           [[ $filename =~ .*sql* ]] ||
+           [[ $filename =~ .*config* ]]) &&
+           [ "$(find "$filename" -mmin -1440 -exec echo "true" \;)" == 'true' ];
+        then
+
+          # config file found; encrypt
+          lockdown "$filename"
+
+          TO_RESET+=$filename,
+
+        fi
+      }
+    done
+
+    # finish off the original request
+    git add -A
+
+    # but reset any sensitive files so they remain untracked
+    IFS=$','
+    for FILE_RESET in ${TO_RESET: : -1};
+
+      do {
+          git reset "$FILE_RESET"
+
+          # append to .gitignore (assuming these files aren't regularly modified!!)
+          echo "$FILE_RESET" >> .gitignore
+      }
+
+    done
+
+    # assuming since we made it this far, .gitignore was modified
+    git add .gitignore
+
+  else
+
+    # if the file being added has config in the filename, encrypt
+    if [[ $2 != *.gpg ]] &&
+       ([[ $2 == *connection* ]] ||
+       [[ $2 == *.conf ]] ||
+       [[ $2 == *.cnf ]] ||
+       [[ $2 =~ .*sql* ]] ||
+       [[ $2 =~ .*config* ]]) &&
+        [ "$(find "$2" -mmin -1440 -exec echo "true" \;)" == 'true' ];
+    then
+
+      lockdown "$2"
+      git add "$2".gpg
+      echo "$2" >> .gitignore
+      git reset "$2"
+
+    else
+
+      # normal file, git away
+      git add "$2"
+
+    fi
+  fi
+
+  exit 0
+
+# gitenc is not a fill-in for git
+elif [ "$1" != 'setup' ];
+then
+
+  echo -e "Command not recognized; you only need to run gitenc in place of 'git add'.. it serves no other purpose.\nRun 'git yourcommand', instead."
+
+fi
+
+
+### setup ###
+
+# if a setup argument is passed
+if [ "$1" = 'setup' ];
+then
+
+  function createconfig() {
+
+    echo "$1" > "$GITENC_CONF"
+    echo -e "GPG password saved to $HOME/.gitenc!\nYou can now auto-encrypt your config by running:\n\tgitenc add filename\n\tor\n\tgitenc add ."
+    exit 0
+
+  }
+
+
+  echo "Enter your preferred password to use for the GPG encryption:"
+  read -r PW_PREF
+
+
+  # if the directory for config doesn't already exist, create it
+  if [ "$PW_PREF" != "" ] && [ ! -f "$GITENC_CONF" ];
+  then
+
+    touch "$GITENC_CONF"
+
+    # if a .gitingore doesn't exist, it'll need to be added
+    if [ ! -f .gitignore ];
+    then
+
+      touch .gitignore
+
+    fi
+
+  elif [ "$PW_PREF" == "" ];
+  then
+
+    echo "GPG password should not be blank.  Try again:"
+    read -r PW_PREF
+
+  else
+
+    echo "Unknown error occured, please submit a bug report: https://notabug.org/angela/gitenc"
+    exit 1
+
+  fi
+
+    # assuming.. if we made it this far, there was a successful config creation
+    createconfig "$PW_PREF"
+
+fi
