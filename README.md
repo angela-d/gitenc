@@ -97,6 +97,8 @@ No, the original file is never touched.
 
 ***
 ## Worth Mentioning
+- If you add multiple files by hand (`git add filename1 filename2 filename3`) use **git** instead of **gitenc** (or wildcard: `gitenc add .`) - it is assumed since you're adding files manually, you wouldn't purposely commit a sensitive file, so Gitenc processing is not implemented for such commands.
+
 - If you use Gitenc to delete/re-add previously committed sensitive files, that data is still in the repo (even after deletion) for hackers to find during future breaches.  For good measure, either erase the commit history or start a fresh repository (or simply change the passwords/sensitive data!).
 
 ***
