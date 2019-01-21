@@ -24,7 +24,7 @@ Gitenc is a simple shell script that works as a placeholder for `git add` and wi
 
 - Clone the repo and launch setup to generate the necessary config
 ```bash
-git clone https://github.com/angela-d/gitenc/gitenc.git  ~/gitenc && cd ~/gitenc && ./gitenc setup
+git clone https://github.com/angela-d/gitenc.git  ~/gitenc && cd ~/gitenc && ./gitenc setup
 ```
 
 - You will be prompt to choose a password for the GPG encryption (which you'd also use to decrypt the file)
