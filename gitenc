@@ -49,7 +49,7 @@ then
     done
 
     # finish off the original request
-    git add -A
+    git add .
 
     # but reset any sensitive files so they remain untracked
     IFS=$','
