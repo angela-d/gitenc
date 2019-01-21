@@ -3,6 +3,50 @@
 # /home/your_username/.gitenc
 GITENC_CONF="$HOME/.gitenc"
 
+function toencrypt() {
+
+  if [[ $1 != *.gpg ]] &&
+     ([[ $1 == *connection* ]] ||
+     [[ $1 == *.conf ]] ||
+     [[ $1 == *.cnf ]] ||
+     [[ $1 =~ .*sql* ]] ||
+     [[ $1 =~ .*config* ]]) &&
+     [ "$(find "$1" -mmin -1440 -exec echo "true" \;)" == 'true' ];
+
+  then
+
+    # sensitive data filename match; encrypt (if modified within the past 24hrs)
+    lockdown "$1"
+
+    # add the encrypted file to git
+    git add "$1".gpg
+
+    # remove the original from git tracking
+    git reset "$1"
+
+    # append the original to .gitignore
+    echo "$1" >> .gitignore
+
+    IGNORE="true"
+
+  else
+
+    # normal file, git away
+    git add "$1"
+
+    IGNORE="false"
+
+  fi
+
+  # call outside the loop so it isn't added on each match
+  if [ $IGNORE == "true" ];
+  then
+
+    git add .gitignore
+
+  fi
+}
+
 function lockdown() {
 
   # if a previously encrypted file exists, remove it
@@ -30,83 +74,20 @@ then
       do {
 
         # only re-encrypt files if they were changed in the last 24hrs
-        if [[ $filename != *.gpg ]] &&
-           ([[ $filename == *connection* ]] ||
-           [[ $filename == *.conf ]] ||
-           [[ $filename == *.cnf ]] ||
-           [[ $filename =~ .*sql* ]] ||
-           [[ $filename =~ .*config* ]]) &&
-           [ "$(find "$filename" -mmin -1440 -exec echo "true" \;)" == 'true' ];
-        then
+        toencrypt "$filename"
 
-          # config file found; encrypt
-          lockdown "$filename"
-
-          TO_RESET+=$filename,
-
-        fi
       }
     done
-
-    # finish off the original request
-    git add .
-
-    # but reset any sensitive files so they remain untracked
-    IFS=$','
-    for FILE_RESET in ${TO_RESET: : -1};
-
-      do {
-          git reset "$FILE_RESET"
-
-          # append to .gitignore (assuming these files aren't regularly modified!!)
-          echo "$FILE_RESET" >> .gitignore
-      }
-
-    done
-
-    # assuming since we made it this far, .gitignore was modified
-    git add .gitignore
 
   else
 
-    # if the file being added has config in the filename, encrypt
-    if [[ $2 != *.gpg ]] &&
-       ([[ $2 == *connection* ]] ||
-       [[ $2 == *.conf ]] ||
-       [[ $2 == *.cnf ]] ||
-       [[ $2 =~ .*sql* ]] ||
-       [[ $2 =~ .*config* ]]) &&
-        [ "$(find "$2" -mmin -1440 -exec echo "true" \;)" == 'true' ];
-    then
-
-      lockdown "$2"
-      git add "$2".gpg
-      echo "$2" >> .gitignore
-      git reset "$2"
-
-    else
-
-      # normal file, git away
-      git add "$2"
+    # singular file add
+    toencrypt "$2"
 
     fi
-  fi
-
-  exit 0
-
-# gitenc is not a fill-in for git
-elif [ "$1" != 'setup' ];
-then
-
-  echo -e "Command not recognized; you only need to run gitenc in place of 'git add'.. it serves no other purpose.\nRun 'git yourcommand', instead."
-
-fi
-
 
 ### setup ###
-
-# if a setup argument is passed
-if [ "$1" = 'setup' ];
+elif [ "$1" == 'setup' ];
 then
 
   function createconfig() {
@@ -119,7 +100,7 @@ then
 
 
   echo "Enter your preferred password to use for the GPG encryption:"
-  read -r PW_PREF
+  read -rs PW_PREF
 
 
   # if the directory for config doesn't already exist, create it
@@ -140,7 +121,7 @@ then
   then
 
     echo "GPG password should not be blank.  Try again:"
-    read -r PW_PREF
+    read -rs PW_PREF
 
   else
 
@@ -151,5 +132,20 @@ then
 
     # assuming.. if we made it this far, there was a successful config creation
     createconfig "$PW_PREF"
+
+elif [ "$1" == "-h" ] ||  [ "$1" == "--help" ] || [ "$1" == "help" ];
+then
+
+  echo -e "\n\t\tGITENC USAGE\n\n"
+  echo -e "gitenc add filename\nParses the individual added filename for common sensitive filenames (ie. widget.conf or connection.py)\n"
+  echo -e "gitenc add . or -A or --all\nParses group filenames for common sensitive filenames (ie. widget.conf or connection.py)\n"
+  echo -e "gitenc add filename1 filename2 filename3\nNot implemented; don't use.  \
+  One might assume since you're adding individual filenames by hand, you wouldn't intentionally commit a sensitive file in the first place.\n \
+  Use git add filename1 filename2 filename3"
+
+else
+
+  # gitenc is not a replacement for git
+  echo -e "Command not recognized; you only need to run gitenc in place of 'git add'.. it serves no other purpose.\nRun 'git yourcommand', instead."
 
 fi
