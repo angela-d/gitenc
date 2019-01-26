@@ -59,6 +59,12 @@ The alternative to using something like Gitenc is submitting plaintext sensitive
 
 You cannot bank on the fact the Git host with your private repos will never be hacked.
 
+**Why submit confidential files to a Git repo at all?**
+
+Your use case may vary - my personal reason behind building something like Gitenc is because I use private repos as remote backups, so I definitely would *like* to have copies of the config and databases, when at all possible.  Before, I was placing immense trust in the Git host; now, I don't have to.  If their database gets taken that has all of my repos, the most sensitive data remains secure.
+
+If you use Git repos for other purposes and load up your .gitignore with all of your sensitive files, you'll have absolutely no use for Gitenc.
+
 ### How secure is this?
 Gitenc doesn't do any encryption of it's own, it piggybacks on the existing GPG mechanism.
 
