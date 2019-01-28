@@ -10,12 +10,14 @@ There are existing solutions that achieve the same (like git-crypt) or OpenSSL f
 
 
 ## What does it do?
-Gitenc is a simple shell script that works as a placeholder for `git add` and will parse filenames for sensitive names from `git status` and apply [GPG encryption](https://gnupg.org/) as needed (filenames matching **config**, **connection** or **sqlbackup**) while handing everything off to git.
+Gitenc is a simple shell script that works as a placeholder for `git add` and will parse filenames for sensitive names from `git diff` and apply [GPG encryption](https://gnupg.org/) as needed (filenames matching **config**, **connection** or **sqlbackup**) while handing everything off to git.
 
  It essentially automates long shell commands (allowing for git automation!)
 
+## Compatibility
+Built for Linux-based systems.  Tested on Debian 9, Ubuntu 16.04 and 18.04 and CentOS 7, but should also work in others.
+
 ## Dependencies
-- Linux-based OS (may work in Mac or BSD, but untested).  Only tested on Debian, but should work in others.
 - Git `apt install git`
 - GPG `apt install gpg` (may be `gpg2` on some distros)
 - Bash (Pre-installed on GNU-based systems; coreutils on Mac)
@@ -38,13 +40,17 @@ git clone https://github.com/angela-d/gitenc.git  ~/gitenc && cd ~/gitenc && ./g
 ### Add a symbolic link
 As root/sudo (assuming of course, you installed via the installation suggested path):
 ```bash
-ln -s $HOME/gitenc/gitenc /bin/gitenc
+sudo ln -s $HOME/gitenc/gitenc /bin/gitenc
 ```
-- Instead of `git add` use `gitenc add` during your normal workflow.  If you do not have root access, you can call gitenc by its full path: `/home/YOUR_USER/gitenc/gitenc add filename`
+- Instead of `git add` use `gitenc add` during your normal workflow.  
+- If you do not have root access, you can call gitenc by its full path: `/home/YOUR_USER/gitenc/gitenc add filename`
 
 That's it!
 
-## Decrypt a File
+***
+***
+## Gitenc Usage
+### Decrypt a File
 Via command-line
 ```bash
 gpg --decrypt filename.gpg
@@ -71,7 +77,7 @@ Before (without manually encrypting sensitive data), you'd be placing an immense
 If you use Git repos for other purposes and load up your .gitignore with all of your sensitive files, you'll have absolutely no use for Gitenc.
 
 ### How secure is this?
-Gitenc doesn't do any encryption of it's own, it piggybacks on the existing GPG mechanism.
+Gitenc doesn't do any encryption of it's own, it utilizes the existing GPG cryptography.
 
 One might assume if your private Git repo was involved in a hack, the system you're generating the encryption on would be an entirely separate entity - so any "risk" is close to zero.
 
@@ -110,6 +116,7 @@ No, the original file is never touched.
 ## Worth Mentioning
 - If you use Gitenc to delete/re-add previously committed sensitive files, that data is still in the repo (even after deletion) for hackers to find during future breaches.  For good measure, either erase the commit history or start a fresh repository (or simply change the passwords/sensitive data!).
 
+- Gitenc will only encrypt a triggered file if it's mtime (modified time) is within the last 24 hours.  If you have an older file that isn't already listed in .gitignore you'd like Gitenc to handle, change the mtime: `touch filename.conf`
 ***
 ### Remove the sensitive files from being tracked (previously tracked only - on a live server) -- optional
 If you're running Gitenc on a new repo (no history), mirrors or backups only (or have changed any previously committed sensitive data), you won't need to mess with any of this.
