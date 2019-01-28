@@ -20,7 +20,7 @@ Gitenc is a simple shell script that works as a placeholder for `git add` and wi
 - GPG `apt install gpg` (may be `gpg2` on some distros)
 - Bash (Pre-installed on GNU-based systems; coreutils on Mac)
 
-## To Use
+## To Use / Install
 
 - Clone the repo and launch setup to generate the necessary config
 ```bash
@@ -36,9 +36,9 @@ git clone https://github.com/angela-d/gitenc.git  ~/gitenc && cd ~/gitenc && ./g
 - If no "sensitive" files are found, Git routines proceed like normal.
 
 ### Add a symbolic link
-As root/sudo:
+As root/sudo (assuming of course, you installed via the installation suggested path):
 ```bash
-ln -s /home/YOUR_USER/gitenc/gitenc /bin/gitenc
+ln -s $HOME/gitenc/gitenc /bin/gitenc
 ```
 - Instead of `git add` use `gitenc add` during your normal workflow.  If you do not have root access, you can call gitenc by its full path: `/home/YOUR_USER/gitenc/gitenc add filename`
 
@@ -49,7 +49,10 @@ Via command-line
 ```bash
 gpg --decrypt filename.gpg
 ```
-
+Into a file:
+```bash
+gpg --output filename.conf --decrypt filename.gpg
+```
 ***
 ### What is Gitenc's purpose?
 Assuming you have sensitive data that isn't already encrypted at rest..
@@ -59,9 +62,11 @@ The alternative to using something like Gitenc is submitting plaintext sensitive
 
 You cannot bank on the fact the Git host with your private repos will never be hacked.
 
-**Why submit confidential files to a Git repo at all?**
+**Why submit confidential files to a Git repo, at all?**
 
-Your use case may vary - my personal reason behind building something like Gitenc is because I use private repos as remote backups, so I definitely would *like* to have copies of the config and databases, when at all possible.  Before, I was placing immense trust in the Git host; now, I don't have to.  If their database gets taken that has all of my repos, the most sensitive data remains secure.
+Your use case may vary - my personal reason behind building something like Gitenc is because I use private repos as remote backups, so I definitely would *like* to have copies of the config and databases, when at all possible.
+
+Before (without manually encrypting sensitive data), you'd be placing an immense amount of trust in the Git host; now, you don't have to.  If their system gets taken, the most sensitive data inside the repos remains secure.
 
 If you use Git repos for other purposes and load up your .gitignore with all of your sensitive files, you'll have absolutely no use for Gitenc.
 
@@ -89,7 +94,7 @@ gpg --cipher-algo CAMELLIA256 # the cipher you want to use
 ```
 to the line in the lockdown() function from the source:
 ```bash
-gpg --batch -c --cipher-algo CAMELLIA256 --passphrase-file "$GITENC_CONF" "$1"
+"$GPG_LOC" --batch -c --cipher-algo CAMELLIA256 --passphrase-file "$GITENC_CONF" "$1"
 ```
 
 ### What happens when the current GPG algorithm used has been penetrated?
@@ -103,8 +108,6 @@ No, the original file is never touched.
 
 ***
 ## Worth Mentioning
-- If you add multiple files by hand (`git add filename1 filename2 filename3`) use **git** instead of **gitenc** (or wildcard: `gitenc add .`) - it is assumed since you're adding files manually, you wouldn't purposely commit a sensitive file, so Gitenc processing is not implemented for such commands.
-
 - If you use Gitenc to delete/re-add previously committed sensitive files, that data is still in the repo (even after deletion) for hackers to find during future breaches.  For good measure, either erase the commit history or start a fresh repository (or simply change the passwords/sensitive data!).
 
 ***
@@ -146,3 +149,6 @@ Apache 2.4+ example:
 ## Backup before you use Gitenc!
 ## Test your encrypted files (make sure you can decrypt them)!  
 Different systems might handle the encryption syntax differently.. please report in the issues if yours does.
+
+### Thanks
+**alfunx** - Code suggestions and improvements
