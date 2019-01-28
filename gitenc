@@ -22,43 +22,41 @@ function toencrypt() {
     git add "$1".gpg
 
     # remove the original from git tracking
-    git reset "$1"
+    git reset -- "$1"
 
     # append the original to .gitignore
     echo "$1" >> .gitignore
-
-    IGNORE="true"
+    git add .gitignore
 
   else
 
     # normal file, git away
     git add "$1"
 
-    IGNORE="false"
-
   fi
 
-  # call outside the loop so it isn't added on each match
-  if [ $IGNORE == "true" ];
-  then
-
-    git add .gitignore
-
-  fi
 }
 
 function lockdown() {
 
   # if a previously encrypted file exists, remove it
-  if [ -f "$1".gpg ];
+  rm -f "$1".gpg
+
+  # determine whether or not this system uses gpg or gpg2 package
+  if [ -f /usr/bin/gpg ] || [ -f /bin/gpg ];
   then
 
-    rm "$1".gpg
+    GPG_LOC='gpg'
+
+  elif [ -f /usr/bin/gpg2 ] || [ -f /bin/gpg2 ];
+  then
+
+    GPG_LOC='gpg2'
 
   fi
 
   # to alter the cipher used, append your selection below
-  gpg --batch -c --passphrase-file "$GITENC_CONF" "$1"
+  "$GPG_LOC" --batch -c --passphrase-file "$GITENC_CONF" "$1"
 
 }
 
@@ -67,40 +65,58 @@ function lockdown() {
 if [ "$1" == "add" ];
 then
 
-  if [ "$2" == "." ] || [ "$2" == "-A" ] || [ "$2" == "--all" ];
-  then
+  # preserve original git add functionalities and stage everything by default
+  shift
+  git add "$@"
 
-    for filename in $(git status --porcelain | sed s/^...//);
-      do {
+    for filename in $(git diff --cached --name-only);
+    do
 
-        # only re-encrypt files if they were changed in the last 24hrs
-        toencrypt "$filename"
+      # only encrypt files modified within the last 24 hours
+      toencrypt "$filename"
 
-      }
     done
-
-  else
-
-    # singular file add
-    toencrypt "$2"
-
-    fi
 
 ### setup ###
 elif [ "$1" == 'setup' ];
 then
 
+  function pw_validate() {
+
+    echo "Enter your preferred password to use for the GPG encryption:"
+    read -rs PW_PREF
+
+    if [ "$PW_PREF" == "" ];
+    then
+
+      echo "Password must not be blank, try again:"
+
+    fi
+
+    echo "Please re-enter the password, to confirm:"
+    read -rs PW_CONFIRM
+
+    if [ "$PW_PREF" != "$PW_CONFIRM" ];
+    then
+
+      echo "Passwords do not match.  Try again."
+      pw_validate
+
+    fi
+
+  }
+
   function createconfig() {
 
     echo "$1" > "$GITENC_CONF"
-    echo -e "GPG password saved to $HOME/.gitenc!\nYou can now auto-encrypt your config by running:\n\tgitenc add filename\n\tor\n\tgitenc add ."
+    echo -e "GPG password saved to $HOME/.gitenc!\nYou can now auto-encrypt your config by running:\n\tgitenc add filename\n\t\tor\n\tgitenc add .\n\n"
+    echo -e "To use Gitenc without requiring an absolute path on every command, create a symlink:\n\tsudo ln -s $HOME/gitenc/gitenc /bin/gitenc"
     exit 0
 
   }
 
 
-  echo "Enter your preferred password to use for the GPG encryption:"
-  read -rs PW_PREF
+  pw_validate
 
 
   # if the directory for config doesn't already exist, create it
@@ -116,12 +132,6 @@ then
       touch .gitignore
 
     fi
-
-  elif [ "$PW_PREF" == "" ];
-  then
-
-    echo "GPG password should not be blank.  Try again:"
-    read -rs PW_PREF
 
   else
 
@@ -139,10 +149,21 @@ then
   echo -e "\n\t\tGITENC USAGE\n\n"
   echo -e "gitenc add filename\nParses the individual added filename for common sensitive filenames (ie. widget.conf or connection.py)\n"
   echo -e "gitenc add . or -A or --all\nParses group filenames for common sensitive filenames (ie. widget.conf or connection.py)\n"
-  echo -e "gitenc add filename1 filename2 filename3\nNot implemented; don't use.  \
-  One might assume since you're adding individual filenames by hand, you wouldn't intentionally commit a sensitive file in the first place.\n \
-  Use git add filename1 filename2 filename3"
+  echo -e "\nExample Cron Usage:\n00 02 * * * cd /home/user/public_html && gitenc add . && git commit -m "Adding new changes" && git push && cd"
+  echo -e "\nDecrypt an Encrypted File to the CLI:\ngpg --decrypt filename.gpg"
+  echo -e "\nDecrypt an Encrypted File and Make a Physical Copy:\ngpg --output filename.conf --decrypt filename.gpg\n \
+  Note: Some systems run gpg as gpg2 - so if running gpg via the command-line interface, try gpg2"
 
+  echo -e "\n\t\tUNINSTALL\n\n \
+  - Remove/delete $HOME/gitenc directory\n \
+  - Remove/delete $GITENC_CONF file\n \
+  - If a symlink was set, remove /bin/gitenc\n"
+
+  echo -e "\n\t\tABOUT\n\n"
+  echo -e "Developed by Angela D\n \
+  - https://github.com/angela-d\n \
+  - https://notabug.org/angela\n
+  Code improvements and additional suggestions by alfunx"
 else
 
   # gitenc is not a replacement for git
