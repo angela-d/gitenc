@@ -61,6 +61,7 @@ That's it!
 Optional Usage
 - [Untrack Sensitive Files](readme/untrack-sensitive-files.md) - Previously committed files (not necessary for new repos)
 - [Block Public Access](readme/block-public-access.md) - If storing encrypted files in a public web directory
+- [Delete from History](readme/delete-from-git-history.md) - *Previously committed* files
 
 ***
 ### What is Gitenc's purpose?
