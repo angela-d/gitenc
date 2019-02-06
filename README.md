@@ -8,14 +8,18 @@ I didn't want to sit and manually encrypt sensitive files with each new commit, 
 
 There are existing solutions that achieve the same (like git-crypt) or OpenSSL flags; git-crypt appears to be abandoned and I like using GPG - though I have nothing against OpenSSL for the same function.
 
+I also wanted behavior that I felt should be simple enough to reside in a small codebase and not require a bunch of steps or maintenance.
+
 
 ## What does it do?
-Gitenc is a simple shell script that works as a placeholder for `git add` and will parse filenames for sensitive names from `git diff` and apply [GPG encryption](https://gnupg.org/) as needed (filenames matching **config**, **connection** or **sqlbackup**) while handing everything off to git.
+Gitenc is a simple shell script that works as a wrapper for `git add` and will parse filenames for sensitive names from `git diff` and apply [GPG encryption](https://gnupg.org/) as needed (filenames matching **config**, **connection** or **sqlbackup**) while handing everything off to git.
 
  It essentially automates long shell commands (allowing for git automation!)
 
 ## Compatibility
-Built for Linux-based systems.  Tested on Debian 9, Ubuntu 16.04 and 18.04 and CentOS 7, but should also work in others.
+Built for GNU/Linux-based systems.
+
+Tested on Debian 9, Ubuntu 16.04, 18.04 and CentOS 7, but should also work in others.
 
 ## Dependencies
 - Git `apt install git`
@@ -49,16 +53,15 @@ That's it!
 
 ***
 ***
-## Gitenc Usage
-### Decrypt a File
-Via command-line
-```bash
-gpg --decrypt filename.gpg
-```
-Into a file:
-```bash
-gpg --output filename.conf --decrypt filename.gpg
-```
+## Additional Gitenc Usage
+
+- [Decrypt Encrypted Files](readme/decrypt-files.md)
+- [Change Cipher Algorithm](readme/change-cipher-algo.md)
+
+Optional Usage
+- [Untrack Sensitive Files](readme/untrack-sensitive-files.md) - Previously committed files (not necessary for new repos)
+- [Block Public Access](readme/block-public-access.md) - If storing encrypted files in a public web directory
+
 ***
 ### What is Gitenc's purpose?
 Assuming you have sensitive data that isn't already encrypted at rest..
@@ -89,20 +92,6 @@ Sure does. Though the purpose of Gitenc isn't to encrypt where the file resides,
 
 If you feel an attacker can sniff a GPG password from a dotfile off *your* system, from *your* user, you have bigger security concerns that command your attention.
 
-### What cipher algorithm is used to encrypt?
-Dependent on your system/preferences and version of GPG.  My Debian 9 system's default is AES256.  To see the list of ciphers available to you, under **Ciphers**:
-```bash
-gpg --version
-```
-Gitenc will use the default.  You can override by appending your choice (using CAMELLIA256 in the example):
-```bash
-gpg --cipher-algo CAMELLIA256 # the cipher you want to use
-```
-to the line in the lockdown() function from the source:
-```bash
-"$GPG_LOC" --batch -c --cipher-algo CAMELLIA256 --passphrase-file "$GITENC_CONF" "$1"
-```
-
 ### What happens when the current GPG algorithm used has been penetrated?
 All of your previously encrypted files become penetrable.  Routinely clear the history for those files, periodically rotate the repositories with sensitive data, or pay attention to GPG release changelogs.
 
@@ -118,40 +107,6 @@ No, the original file is never touched.
 
 - Gitenc will only encrypt a triggered file if it's mtime (modified time) is within the last 24 hours.  If you have an older file that isn't already listed in .gitignore you'd like Gitenc to handle, change the mtime: `touch filename.conf`
 ***
-### Remove the sensitive files from being tracked (previously tracked only - on a live server) -- optional
-If you're running Gitenc on a new repo (no history), mirrors or backups only (or have changed any previously committed sensitive data), you won't need to mess with any of this.
-- Run Gitenc and let it do its thing
-- Open `.git/config` and **remove the public/live server** repo, like so:
-```bash
-url = git@bitbucket.org:{user}/{repo}.git
-#pushurl = ssh://{user}@{server}:{port}/home/{user}/public_html/
-```
-- url = The repo I'm most concerned about
-- pushurl = The live server that receives mirror updates from local pushes
-- The sensitive file still shows as untracked, which won't necessarily hurt anything, but I'd like to clean it up:
-```bash
-git rm --cached sensitivefile.conf
-```
-Note that the file will remain locally but will be deleted from the live server during the next push.
-
-- Commit it (this is removing it from Bitbucket, only.. for now)
-```bash
-git commit -m "Untracking file" && git push
-```
-- Prepare the unencrypted file to go back on the server after the pushurl is restored (open your sftp or ssh client and simply restore them)
-- Uncomment the `pushurl` and run `git push` -- the sensitive files are now deleted, so quickly restore any affected file.
-
-That's it.  Now they will NOT be tracked for future changes, unless you force them through later on.  (This does not remove the file from the *history*.)
-
-### Public access to encrypted files
-- If you're going to keep the .gpg files on a public server, ensure you add regex to prevent direct access - although they're encrypted, it's best not to tempt.
-
-Apache 2.4+ example:
-```aconf
-<FilesMatch "(?i)((\.yml|\.gpg))">
-  Require all denied
-</FilesMatch>
-```
 
 ## Backup before you use Gitenc!
 ## Test your encrypted files (make sure you can decrypt them)!  
