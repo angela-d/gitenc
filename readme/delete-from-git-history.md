@@ -20,6 +20,11 @@ You'll receive output similar to:
 >Ref 'refs/remotes/origin/master' was rewritten
 >WARNING: Ref 'refs/remotes/origin/master' is unchanged
 
+Run removal for tags, also (if you use them):
+```bash
+git push origin --force --tags
+```
+
 Push the changes into the remote repository:
 ```bash
 git push --force --all
