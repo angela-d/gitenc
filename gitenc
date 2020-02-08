@@ -10,6 +10,7 @@ function toencrypt() {
      [[ $1 == *.conf ]] ||
      [[ $1 == *.cnf ]] ||
      [[ $1 =~ .*sql* ]] ||
+     [[ $1 == *.db ]] ||
      [[ $1 =~ .*config* ]]) &&
      [ "$(find "$1" -mmin -1440 -exec echo "true" \;)" == 'true' ];
 
@@ -24,9 +25,12 @@ function toencrypt() {
     # remove the original from git tracking
     git reset -- "$1"
 
-    # append the original to .gitignore
-    echo "$1" >> .gitignore
-    git add .gitignore
+    # append the original to .gitignore (if its not already there)
+    if [ "$(grep "$1" .gitignore)" == "" ];
+    then
+      echo "$1" >> .gitignore
+      git add .gitignore
+    fi
 
   else
 
