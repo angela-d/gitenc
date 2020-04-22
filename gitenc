@@ -11,6 +11,7 @@ function toencrypt() {
      [[ $1 == *.cnf ]] ||
      [[ $1 =~ .*sql* ]] ||
      [[ $1 == *.db ]] ||
+     [[ $1 == *.bin ]] ||
      [[ $1 =~ .*config* ]]) &&
      [ "$(find "$1" -mmin -1440 -exec echo "true" \;)" == 'true' ];
 
